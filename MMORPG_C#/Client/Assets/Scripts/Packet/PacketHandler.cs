@@ -105,7 +105,9 @@ class PacketHandler
 	{
 		Debug.Log("S_ConnectedHandler");
 		C_Login loginPacket = new C_Login();
-		loginPacket.UniqueId = SystemInfo.deviceUniqueIdentifier;
+
+		string path = Application.dataPath;
+		loginPacket.UniqueId = path.GetHashCode().ToString();
 		Managers.Network.Send(loginPacket);
 	}
 
@@ -154,9 +156,6 @@ class PacketHandler
 	{
 		S_ItemList itemList = (S_ItemList)packet;
 
-		UI_GameScene gameSceneUI = Managers.UI.SceneUI as UI_GameScene;
-		UI_Inventory invenUI = gameSceneUI.InvenUI;
-
 		Managers.Inven.Clear();
 
 		// 메모리에 아이템 정보 적용
@@ -166,9 +165,63 @@ class PacketHandler
 			Managers.Inven.Add(item);
 		}
 
-		// UI 에서 표시
-		invenUI.gameObject.SetActive(true);
-		invenUI.RefreshUI();
+		if (Managers.Object.MyPlayer != null)
+			Managers.Object.MyPlayer.RefreshAdditionalStat();
+	}
+
+	public static void S_AddItemHandler(PacketSession session, IMessage packet)
+	{
+		S_AddItem itemList = (S_AddItem)packet;
+
+		// 메모리에 아이템 정보 적용
+		foreach (ItemInfo itemInfo in itemList.Items)
+		{
+			Item item = Item.MakeItem(itemInfo);
+			Managers.Inven.Add(item);
+		}
+
+		Debug.Log("아이템을 획득했습니다!");
+
+		UI_GameScene gameSceneUI = Managers.UI.SceneUI as UI_GameScene;
+		gameSceneUI.InvenUI.RefreshUI();
+		gameSceneUI.StatUI.RefreshUI();
+
+		if (Managers.Object.MyPlayer != null)
+			Managers.Object.MyPlayer.RefreshAdditionalStat();
+	}
+
+	public static void S_EquipItemHandler(PacketSession session, IMessage packet)
+	{
+		S_EquipItem equipItemOk = (S_EquipItem)packet;
+
+		// 메모리에 아이템 정보 적용
+		Item item = Managers.Inven.Get(equipItemOk.ItemDbId);
+		if (item == null)
+			return;
+
+		item.Equipped = equipItemOk.Equipped;
+		Debug.Log("아이템 착용 변경!");
+
+		UI_GameScene gameSceneUI = Managers.UI.SceneUI as UI_GameScene;
+		gameSceneUI.InvenUI.RefreshUI();
+		gameSceneUI.StatUI.RefreshUI();
+
+		if (Managers.Object.MyPlayer != null)
+			Managers.Object.MyPlayer.RefreshAdditionalStat();
+	}
+
+	public static void S_ChangeStatHandler(PacketSession session, IMessage packet)
+	{
+		S_ChangeStat itemList = (S_ChangeStat)packet;
+
+		// TODO
+	}
+
+	public static void S_PingHandler(PacketSession session, IMessage packet)
+	{
+		C_Pong pongPacket = new C_Pong();
+		Debug.Log("[Server] PingCheck");
+		Managers.Network.Send(pongPacket);
 	}
 }
 
